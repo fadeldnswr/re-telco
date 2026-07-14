@@ -49,6 +49,16 @@ def theoritical_qpsk_ber(ebn0_db: float | NDArray[np.float64]) -> float | NDArra
   # If the input is an array, return the array of BER values
   return ber
 
+# Define function to calculate theoretical cp-adjusted BER
+def theoritical_qpsk_ofdm_ber(ebn0_db: np.ndarray, useful_samples: int, total_samples: int) -> np.ndarray:
+  # Define cyclic prefix efficiency
+  cp_efficiency = useful_samples / total_samples
+
+  # Calculate effective Eb/N0 in dB considering the cyclic prefix
+  effective_ebn0_linear = 10.0 ** (ebn0_db / 10.0) * cp_efficiency
+
+  return 0.5 * erfc(np.sqrt(effective_ebn0_linear))
+
 # Define function to calculate avg symbol energy
 def average_symbol_energy(symbols: ComplexArray) -> float:
   # Define symbols as a numpy array of complex numbers
