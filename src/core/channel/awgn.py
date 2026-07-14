@@ -8,6 +8,16 @@ import numpy as np
 # Define complex number array
 ComplexArray = NDArray[np.complex128]
 
+# Define dataclass for AWGN Waveform result
+@dataclass(frozen=True, slots=True)
+class AWGNWaveformResult:
+  received_signal: ComplexArray
+  noise: ComplexArray
+  total_signal_energy: float
+  bit_energy: float
+  noise_variance: float
+  noise_std_dev: float
+
 # Define a dataclass for the AWGN channel model
 @dataclass(frozen=True, slots=True)
 class AWGNChannel:
@@ -66,3 +76,57 @@ class AWGNChannel:
 
     # Return the transmitted signal with added noise
     return signal + noise
+
+  # Define method to transmit a signal and return detailed results
+  def transmit_waveform(self, waveform: ComplexArray, number_of_information_bits: int, rng: np.random.Generator) -> AWGNWaveformResult:
+    '''Transmit a waveform through the AWGN channel and return detailed results.'''
+    # Define waveform
+    waveform = self._validate_signal(waveform)
+
+    # Check if the number of information bits is positive
+    if number_of_information_bits <= 0:
+      raise ValueError("Number of information bits must be a positive integer.")
+    
+    # Calculate total signal energy
+    total_signal_energy = float(
+      np.sum(np.abs(waveform) ** 2)
+    )
+
+    # Calculate waveform energy per bit and noise variance
+    waveform_bit_energy = total_signal_energy / number_of_information_bits
+    waveform_noise_variance = waveform_bit_energy / self.ebn0_linear
+
+    # Calculate standard deviation of the noise based on noise variance
+    standard_deviation = float(
+      np.sqrt(waveform_noise_variance / 2.0)
+    )
+
+    # Define noise as a complex Gaussian random variable
+    noise = standard_deviation * (
+      rng.standard_normal(waveform.shape)
+      + 1j * rng.standard_normal(waveform.shape)
+    )
+
+    return AWGNWaveformResult(
+      received_signal=waveform + noise,
+      noise=noise,
+      total_signal_energy=total_signal_energy,
+      bit_energy=waveform_bit_energy,
+      noise_variance=waveform_noise_variance,
+      noise_std_dev=standard_deviation
+    )
+  
+  # Define static method to validate signal
+  @staticmethod
+  def _validate_signal(signal: ComplexArray) -> ComplexArray:
+    # Define signal as a numpy array of complex numbers
+    signal = np.asarray(signal, dtype=np.complex128)
+
+    # Check the signal dimensions and size
+    if signal.ndim != 1:
+      raise ValueError("Input signal must be a 1D array of complex symbols.")
+    if signal.size == 0:
+      raise ValueError("Input signal must not be empty.")
+
+    # Return the validated signal
+    return signal
