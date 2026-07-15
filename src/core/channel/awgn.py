@@ -78,7 +78,7 @@ class AWGNChannel:
     return signal + noise
 
   # Define method to transmit a signal and return detailed results
-  def transmit_waveform(self, waveform: ComplexArray, number_of_information_bits: int, rng: np.random.Generator) -> AWGNWaveformResult:
+  def transmit_waveform(self, waveform: ComplexArray, number_of_information_bits: int, rng: np.random.Generator, energy_reference: ComplexArray | None = None) -> AWGNWaveformResult:
     '''Transmit a waveform through the AWGN channel and return detailed results.'''
     # Define waveform
     waveform = self._validate_signal(waveform)
@@ -86,10 +86,16 @@ class AWGNChannel:
     # Check if the number of information bits is positive
     if number_of_information_bits <= 0:
       raise ValueError("Number of information bits must be a positive integer.")
+
+    # Check if the energy reference is provided and validate it
+    if energy_reference is None:
+      reference = waveform
+    else:
+      reference = self._validate_signal(energy_reference)
     
     # Calculate total signal energy
     total_signal_energy = float(
-      np.sum(np.abs(waveform) ** 2)
+      np.sum(np.abs(reference) ** 2)
     )
 
     # Calculate waveform energy per bit and noise variance
