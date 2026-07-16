@@ -28,6 +28,7 @@ class AWGNChannel:
   ebn0_db: float  # Energy per bit to noise power spectral density ratio in dB
   bits_per_symbol: int = 2  # Number of bits per symbol for modulation
   symbol_energy: float = 1.0  # Energy of the transmitted symbol
+  code_rate: float = 1.0  # Code rate of the channel coding scheme
 
   # Define a method to add AWGN noise to the transmitted signal
   def __post_init__(self) -> None:
@@ -36,6 +37,9 @@ class AWGNChannel:
     
     if self.symbol_energy <= 0.0:
       raise ValueError("Symbol energy must be a positive value.")
+    
+    if not 0.0 < self.code_rate <= 1.0:
+      raise ValueError("Code rate must be in the range (0, 1].")
   
   # Define property for energy per bit to noise power spectral density ratio in linear scale
   @property
@@ -46,8 +50,8 @@ class AWGNChannel:
   # Define property for bit energy based on symbol energy and bits per symbol
   @property
   def bit_energy(self) -> float:
-    '''Return energy per bit E_b.'''
-    return self.symbol_energy / self.bits_per_symbol
+    '''Return energy per bit E_b = E_S / (bits_per_symbol * code_rate).'''
+    return self.symbol_energy / (self.bits_per_symbol * self.code_rate)
   
   # Define property for noise variance based on Eb/N0 and symbol energy
   @property
