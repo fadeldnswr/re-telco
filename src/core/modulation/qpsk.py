@@ -81,3 +81,44 @@ class QPSK:
 
     # Return the recovered bits as a 1D array of uint8
     return recovered_bits
+
+  # Define method to demap symbols to bits with soft decision (optional)
+  def soft_demap(self, symbols: ComplexArray, noise_variance: float) -> NDArray[np.float64]:
+    """
+    Convert received QPSK symbols into bit log-likelihood ratios.
+    LLR convention:
+      positive LLR -> bit 0 is more likely
+      negative LLR -> bit 1 is more likely
+    Args:
+      symbols:
+        Received complex QPSK symbols.
+      noise_variance:
+        Total complex AWGN variance E[|n|^2]
+    Returns:
+      One LLR value for every transmitted coded bit.
+    """
+    # Define symbols as an array of complex numbers
+    symbols = np.asarray(symbols, dtype=np.complex128)
+
+    # Check its size and dimension
+    if symbols.ndim != 1:
+      raise ValueError("Input symbols must be a 1D array.")
+    if symbols.size == 0:
+      raise ValueError("Input symbols must not be empty.")
+    
+    # Check if noise variance is positive
+    if noise_variance <= 0.0:
+      raise ValueError("Noise variance must be a positive value.")
+    
+    # Define llr values based on the real and imaginary parts of the symbols
+    llr = np.empty(symbols.size * self.bits_per_symbol, dtype=np.float64)
+
+    # For symbols 
+    # s = ((1 - 2b_I) + j(1 - 2b_Q)) / sqrt(2)
+    # Positive real/imaginary component indicates bit 0.
+    scale = (2.0 * np.sqrt(2.0)) / noise_variance
+    llr[0::2] = scale * symbols.real  # LLR for first bit (in-phase)
+    llr[1::2] = scale * symbols.imag  # LLR for second bit (quadrature)
+
+    # Return the computed log-likelihood ratios as a 1D array of float64
+    return llr
