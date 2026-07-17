@@ -122,3 +122,60 @@ class QPSK:
 
     # Return the computed log-likelihood ratios as a 1D array of float64
     return llr
+  
+  # Define method to demap symbols with variable noise
+  def soft_demap_variable_noise(self, symbols: ComplexArray, noise_variance: NDArray[np.float64], minimum_variance: float = 1e-12) -> NDArray[np.float64]:
+    """
+    Generate QPSK LLRs using one complex-noise variance per symbol.
+    LLR convention:
+      positive -> bit 0 is more likely
+      negative -> bit 1 is more likely
+    Args:
+      symbols:
+        Equalized QPSK symbols.
+
+      noise_variances:
+        Effective complex-noise variance for every QPSK symbol.
+
+      minimum_variance:
+        Prevent division by zero.
+
+    Returns:
+      LLR sequence ordered as:
+        [I0, Q0, I1, Q1, ...]
+    """
+    # Define symbols as an array of complex numbers
+    symbols = np.asarray(symbols, dtype=np.complex128)
+
+    # Define noise variance as an array of float64
+    noise_variance = np.asarray(noise_variance, dtype=np.float64)
+
+    # Check if symbols and noise variance are 1D arrays
+    if symbols.ndim != 1:
+      raise ValueError("Input symbols must be a 1D array.")
+    if noise_variance.ndim != 1:
+      raise ValueError("Input noise variance must be a 1D array.")
+    
+    # Check if symbols and noise variance are not empty
+    if symbols.size == 0:
+      raise ValueError("Input symbols must not be empty.")
+    if noise_variance.size != symbols.size:
+      raise ValueError("Noise variance array size must match symbols array size.")
+    
+    # Check if minimum variance is positive
+    if np.any(noise_variance < 0.0):
+      raise ValueError("Noise variance must be non-negative.")
+    
+    # Define maximum variance
+    safe_variance = np.maximum(noise_variance, minimum_variance)
+
+    # Compute scale factor for LLR calculation
+    scale = (2.0 * np.sqrt(2.0)) / safe_variance
+
+    # Compute LLR values for in-phase and quadrature components
+    llrs = np.empty(symbols.size * self.bits_per_symbol, dtype=np.float64)
+
+    # Compute LLRs based on the real and imaginary parts of the symbols
+    llrs[0::2] = scale * symbols.real  # LLR for first bit (in-phase)
+    llrs[1::2] = scale * symbols.imag  # LLR for second bit (quadrature)
+    return llrs
